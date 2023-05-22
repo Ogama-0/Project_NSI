@@ -1,23 +1,29 @@
-import pygame  
+import pygame
 from sources.code_source.enigme_code import interact_ecrit
 
+        
+
 class inforamtion :
-    largeur = 100
-    background = pygame.transform.scale(pygame.image.load("sources/sprite/autre/texte/bulle_image_enigme.png"),(largeur,25))
+
     def __init__(self,screen : pygame.surface.Surface,texte : str) :
         """créé un object information qui affiche selon le rect de get_object_by_name(texte) de pytmx"""
-        self.font = pygame.font.Font("sources/sprite/autre/texte/dialog_font.ttf",10)
-        
-        self.position = [50,680]
         self.screen = screen
-        if 8 < len(list(texte)) or texte == "" :
-            self.position_texte = [self.position[0]+3,self.position[1]]
-            
-        elif len(list(texte)) <= 8 :
-            self.position_texte = [self.position[0]+5,self.position[1]+5]
+        self.largeur = int(screen.get_width()//10.8)
+        self.hauteur = int(screen.get_height()//48)
+        police = int(self.screen.get_height()//72)
+
+        self.font = pygame.font.Font("sources/sprite/autre/texte/dialog_font.ttf",police)
+        self.position = [screen.get_width()//21.6,screen.get_height()//1.058823529]
+
+        self.position_texte = [self.position[0] + 3,self.position[1]]
+
+        self.background = pygame.transform.scale(pygame.image.load("sources/sprite/autre/texte/bulle_image_enigme.png"),(self.largeur,self.hauteur))
+
         self.texte_pas_surf = texte
         self.texte = self.font.render(texte,1,(0,0,0),None,self.largeur)
         self.entrer = self.font.render("entrer pour confirmer",1,(0,0,0),None,self.largeur)
+        self.background_entrer = pygame.transform.scale(pygame.image.load("sources/sprite/autre/texte/bulle_image_enigme.png"),(self.largeur,int(screen.get_height()//24)))
+        self.position_texte_entrer = [self.position[0] + 3,self.position[1] + 3]
         self.space = self.font.render("espace suivant",1,(0,0,0),None,self.largeur)
         
 
@@ -28,10 +34,11 @@ class inforamtion :
 
         
         if curent_dialogue :
-            self.screen.blit(self.background, self.position)
             if curent_tiping :
-                self.screen.blit(self.entrer,self.position_texte)
+                self.screen.blit(self.background_entrer, self.position)
+                self.screen.blit(self.entrer,self.position_texte_entrer)
             else :
+                self.screen.blit(self.background, self.position)
                 self.screen.blit(self.space,self.position_texte)
         elif self.texte_pas_surf != "":
             self.screen.blit(self.background, self.position)
@@ -43,18 +50,19 @@ class Dialogue :
     lettre = True
     def __init__(self,screen : pygame.surface.Surface,interact : interact_ecrit) :
         """créé un obect Dialogue"""
+        definition = screen.get_width()*screen.get_height()
         self.inte = interact
         self.Fin = False
-        police = 16
+        police = int(definition//48600/2)
         if self.inte.nom == "armure" :
-            police = 37
+            police = int(definition//21016.21622/2)
         
         elif self.inte.nom == "code" :
-            police = 30
+            police = int(definition//25920/2)
         
         if self.inte.nom == "lettre" or self.inte.texts == "" :
             self.lettre = False
-            self.font = pygame.font.Font("sources/sprite/autre/texte/lettre_font.ttf",22)
+            self.font = pygame.font.Font("sources/sprite/autre/texte/lettre_font.ttf",int(definition//35345.45455/1.71))
         else :
             self.font = pygame.font.Font("sources/sprite/autre/texte/dialog_font.ttf",police)
         
@@ -78,7 +86,7 @@ class Dialogue :
         
         self.frame = True #ça sert juste a TAB pour accelerer les dialogues
         if self.inte.position_tiping == () :
-            self.position_tiping = [self.inte.position_text[0],self.inte.position_text[1] + 32]
+            self.position_tiping = [self.inte.position_text[0],self.inte.position_text[1] + self.screen.get_height()//33.75]
         else :
             self.position_tiping = self.inte.position_tiping
         
@@ -165,3 +173,14 @@ class Dialogue :
                     self.frame = True
             else :
                 self.letter_index +=1
+    
+    def W_H(self, W_:int, H_:int)-> tuple[int, int]:
+        """ transphorme un cohordonner sur un screen de 1080 par 720 en cohordonner en fonction du screen"""
+        W = 1080
+        H = 720
+        return self.screen.get_width()*W_/W,self.screen.get_height()*H_/H
+    
+    def H(self, W_:int, H_:int)-> tuple[int, int]:
+        """ transphorme un cohordonner sur un screen de 1080 par 720 en cohordonner en fonction du screen en gadans les propostions"""
+        H = 720
+        return self.screen.get_height()*W_/H,self.screen.get_height()*H_/H

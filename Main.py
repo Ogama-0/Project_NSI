@@ -18,6 +18,7 @@ from sources.code_source.Menu_princ import Menu, Degrader
 from sources.code_source.dialogue import Dialogue
 from dataclasses import dataclass
 import time
+dsqfqd
 @dataclass
 class stk_bouton :
     nom : str

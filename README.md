@@ -16,7 +16,7 @@ j'espère que cela vous plaira
 le programme utilise pygame, pytmx et pyscroll
 pour le lancer il faut executer le "Main.py" en ayant ces trois bibliothèques installées.
 
-depuis le 25/05/2023 je le continue tout seul (oscar) meme si laura fait des dessins de temps en temps
+depuis le 19/04/2023 je le continue tout seul (oscar) meme si laura fait des dessins de temps en temps
 
 contact: 
 Oscar : 

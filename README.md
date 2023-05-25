@@ -11,12 +11,12 @@ Ewen s'est occupé du design des maps et des énigmes
 
 c'est notre premier projet informatique, c'est un jeu d'enigmes où vous devrez comprendre le fonctionnement des enigmes pour parvenir à vous echapper du manoir, et de retrouver Docteur Z votre créateur !
 
-
 j'espère que cela vous plaira
 
 le programme utilise pygame, pytmx et pyscroll
 pour le lancer il faut executer le "Main.py" en ayant ces trois bibliothèques installées.
 
+depuis le 25/05/2023 je le continue tout seul (oscar) meme si laura fait des dessins de temps en temps
 
 contact: 
 Oscar : 

@@ -4,12 +4,14 @@ from dataclasses import dataclass
 from sources.code_source.enigme_code import enigme_sprite, enigme_setup, dialogue_enigme_setup,interact_ecrit
 from sources.code_source.element_mouvent import sprite_mouvent_screen
 from sources.code_source.portail import Setup_Porte , Portail, stk_dialogue, Stk_porte,Porte
-
+import sources.code_source.Pygame_Lights as light
+from sources.code_source.Globale import Globale as GLB
+from pygame.locals import *
 
 # ----------------------------- OBJECTS -------------------------- #
 
 class Stockage :
-    def __init__(self):
+    def __init__(self,screen:pygame.Surface):
         """ j'utilise Stockage pour stocker des variable globale que j'usitilise sur tout l'ensembre du programe"""
         self.musique_Manoir = pygame.mixer.Sound("sources/musique/manoir/Mansion_music.wav")
         self.musique_defaut = self.musique_Manoir
@@ -30,7 +32,33 @@ class Stockage :
         self.dialogue_afficher = False
         self.Fin = False
         self.decrechendo = False
-        self.Fin_backgrounds =  [pygame.transform.scale(pygame.image.load("sources/sprite/autre/menu/Fin1.png"),(1080,720)),pygame.transform.scale(pygame.image.load("sources/sprite/autre/menu/Fin2.png"),(1080,720)),pygame.transform.scale(pygame.image.load("sources/sprite/autre/menu/Fin3.png"),(1080,720))]
+        self.Fin_backgrounds =  [pygame.transform.scale(pygame.image.load("sources/sprite/autre/menu/Fin1.png"),screen.get_size()),pygame.transform.scale(pygame.image.load("sources/sprite/autre/menu/Fin2.png"),screen.get_size()),pygame.transform.scale(pygame.image.load("sources/sprite/autre/menu/Fin3.png"),screen.get_size())]
+@dataclass
+class stk_Light :
+    Light : light.LIGHT
+    name : str = "autre"
+    pos : tuple[int, int] = None
+
+class Lights :
+    def __init__(self, lights:list[stk_Light], global_light:pygame.Surface, collision:list[pygame.Rect]) :
+        self.lights = lights
+        self.global_light = global_light
+        self.collision = collision
+    
+    def afficher(self, Rects:list[pygame.Rect], screen:pygame.Surface, x:int, y:int, vec_mapscreen:tuple[int, int], zoom:int, max_radius:float,player_deplacement:list[int ,int]) :
+        for source in self.lights :
+            if source.name != "player":
+                pos_light = GLB.map_to_screenlist(source.pos,vec_mapscreen,zoom)
+                pos_light[0], pos_light[1] =  pos_light[0] + max_radius, pos_light[1] + max_radius
+                if screen.get_rect().collidepoint(pos_light) :
+                    
+                    source.Light.main(Rects,screen,pos_light[0],pos_light[1])
+            else :
+                source.Light.main(Rects,screen,x + max_radius,y + max_radius)
+
+
+    
+
 
 @dataclass
 class Map :
@@ -49,9 +77,8 @@ class Map :
     list_porte : dict
     clefs : dict[str,bool]
     musique : str
+    lumiere : Lights
 
-
-    
 
 # ---------------------------------------------- MAP MANAGER ---------------------------------------------------#
 
@@ -61,9 +88,7 @@ class Map_manager :
         self.premier_passage_Globale = True
         noir = (0,0,0)
         blanc = (255,255,255)
-        self.stockage_valeur = Stockage()
-
-        
+        self.stockage_valeur = Stockage(screen)
 
         self.maps = dict() #création d'un dico avec tt les maps avec {nom : donné de la classe Map}
         self.curent_map = "Manoir"# map du spawn
@@ -71,11 +96,11 @@ class Map_manager :
         self.screen = screen #definition du screen
         self.curent_dialogue = "start"
         self.curent_sprite_enigme = 0 #le sprite acutelle de l'énigme en question
-        position_dialogue = (200,600) # la position du dialogue
+        dimmention_dialogue = GLB.W_H(700,100)
+        position_dialogue = (screen.get_width()//5.4,screen.get_height()//1.2) # la position du dialogue
+        position_dialogue = GLB.MID_W(dimmention_dialogue, position_dialogue)
         text_spawn = ["???   :    bzz ... ","???    :    Nanit ?","???    :    ...","??? :     Tu m'entends ?","??? :    Tu vas bien ?","??? :    bzz...","??? :    C'est moi Xini!, Ton ami !","Xini :    Quelqu'un semble t'avoir envoyé dans le passé...","Xini :    Il faut vite que tu trouves un moyen de retourner dans notre ere et que tu retrouves ton créateur","Xini :    ... bzz ... ","Xini :    Si la plante que tu as sur la tête grandit trop, elle risque de détruire ta carte mere !", "Xini :    ...  bzz ... ","Xini :    Je capte de mo.. en moins bi..bzzt..","Xini :    Tu dois parcourir... dans... bzz...siecles... Trouv... machine... voyager... bzzt... temps!...","Xini :     ...bip ...bip ...bip."]
-        dialogue_actuelle = stk_dialogue("start",text_spawn,(700,100),position_dialogue,"boite_dialogues")
-        
-
+        dialogue_actuelle = stk_dialogue("start",text_spawn,dimmention_dialogue,position_dialogue,"boite_dialogues")
         self.premier_passage = True
         self.stockage = ""
         self.frame = 0 
@@ -104,23 +129,18 @@ class Map_manager :
                                         Portail("couloir_fin","zonne de detection machine_temps","futur","spawn",True)
                                         ]
         portail_enigme_portail =       [Portail("enigme_portail","un","enigme_portail","2",True),
-                    
                                         Portail("enigme_portail","deux","enigme_portail","3",True),
                                         Portail("enigme_portail","moin_deux","enigme_portail","perdu",True),
                                         Portail("enigme_portail","perdu_2","enigme_portail","perdu",True),
-                                        
                                         Portail("enigme_portail","trois","enigme_portail","4",True),
                                         Portail("enigme_portail","moin_trois","enigme_portail","2",True),
                                         Portail("enigme_portail","perdu_3","enigme_portail","perdu",True),
-
                                         Portail("enigme_portail","quatre","enigme_portail","6",True),
                                         Portail("enigme_portail","moin_quatre","enigme_portail","3",True),
                                         Portail("enigme_portail","perdu_4","enigme_portail","perdu",True),
-
                                         Portail("enigme_portail","ez","enigme_portail","fin",True),
                                         Portail("enigme_portail","moin_sixe","enigme_portail","4",True),
                                         Portail("enigme_portail","perdu_6","enigme_portail","perdu",True),
-                                        
                                         Portail("enigme_portail","sortie_enigme_portail","futur","clef_enigme_portail",False),
                                         Portail("enigme_portail","sortie_portail","futur","sortie_portail_",False)
                                         ]
@@ -133,7 +153,7 @@ class Map_manager :
     # ----------------------------- Porte -------------------------------- #
         porte_sortie_condi = ["horloge","Grosse_Dame","armure"]
 
-        portes_manoir = [Stk_porte("porte_entrer",False,porte_sortie_condi,["cette porte a 3 serrures !"],8,-1)
+        portes_manoir = [Stk_porte("porte_entrer",False,porte_sortie_condi,["cette porte a 3 serrures !"],9,-1)
                         ]
         self.clefs_sans_dialogue = ["portail","tableau_enigme","chimie_","goblet_"]
         condi_porte_principale_futur = ["code"]
@@ -143,11 +163,11 @@ class Map_manager :
         porte_petit_futur_condi_goblet = ["goblet"]
 
 
-        portes_futures = [Stk_porte("principale",False,condi_porte_principale_futur,["entrez le mot de passe dans le terminal situer a votre gauche"],8,22),
-                          Stk_porte("petit_futur_portail",False,porte_petit_futur_condi_portail,["le badge pour ouvrir la piece ne doit pas être tres loin."],8,2),
-                          Stk_porte("petit_futur_tableau",False,porte_petit_futur_condi_tableau,["le badge pour ouvrir la piece ne doit pas être tres loin"],8,2),
-                          Stk_porte("petit_futur_chimie",False,porte_petit_futur_condi_chimie,["le badge pour ouvrir la piece ne doit pas être tres loin"],8,2),
-                          Stk_porte("petit_futur_goblet",False,porte_petit_futur_condi_goblet,["le badge pour ouvrir la piece ne doit pas être tres loin"],8,2)
+        portes_futures = [Stk_porte("principale",False,condi_porte_principale_futur,["entrez le mot de passe dans le terminal situer a votre gauche"],9,22),
+                          Stk_porte("petit_futur_portail",False,porte_petit_futur_condi_portail,["le badge pour ouvrir la piece ne doit pas être tres loin."],9,2),
+                          Stk_porte("petit_futur_tableau",False,porte_petit_futur_condi_tableau,["le badge pour ouvrir la piece ne doit pas être tres loin"],9,2),
+                          Stk_porte("petit_futur_chimie",False,porte_petit_futur_condi_chimie,["le badge pour ouvrir la piece ne doit pas être tres loin"],9,2),
+                          Stk_porte("petit_futur_goblet",False,porte_petit_futur_condi_goblet,["le badge pour ouvrir la piece ne doit pas être tres loin"],9,2)
                           ]
         clefs_manoir = {}
         clefs_future = {}
@@ -193,7 +213,7 @@ class Map_manager :
         #pour la zonne de colision  on fait un get obj by name == dialogue_de_manoir_moyen_test1[i] (donc la par exemple 'lettre')
         
 
-        texte_lettre = ["Il y a de cela fort longtemps, une armure de fer tronait dans son manoir. Se dressant fierement au coeur de l'armurerie, elle protégeait le plus précieux des trésors : la clé de la liberté. Cependant, personne ne savait ou elle se trouvait.Plus loin dans la grande salle, isolée de tous, se tenait une horloge a pendule qui égrenait les secondes avec une régularité effrayante. On racontait que si l'on parvenait à déchiffrer les mystérieux messages que l'horloge transmettait, alors on trouverait la clé. Piece maitresse du couloir des arts, les yeux du portrait de la grande dame semblaient suivre tous les mouvements dans la piece, comme si elle était à la recherche de quelque chose ou de quelqu'un. On disait que si l'on parvenait à comprendre le regard de la dame, on trouverait la clé. Ainsi, la légende raconte que seul celui qui résoudrait les énigmes de l'armure de fer, horloge à pendule et du portrait de la grande dame découvrirait la clé cachée et se libérerait du sommeil éternel de ce manoir.                                                                                                                                                                                                                                                                                                                                             Mais attention, car ceux qui se trompaient                                        n'en ressortaient jamais…"]
+        texte_lettre = ["Il y a de cela fort longtemps, une armure de fer tronait dans son manoir. Se dressant fierement au coeur de l'armurerie, elle protégeait le plus précieux des trésors : la clé de la liberté. Cependant, personne ne savait ou elle se trouvait.Plus loin dans la grande salle, isolée de tous, se tenait une horloge a pendule qui égrenait les secondes avec une régularité effrayante. On racontait que si l'on parvenait à déchiffrer les mystérieux messages que l'horloge transmettait, alors on trouverait la clé. Piece maitresse du couloir des arts, les yeux du portrait de la grande dame semblaient suivre tous les mouvements dans la piece, comme si elle était à la recherche de quelque chose ou de quelqu'un. On disait que si l'on parvenait à comprendre le regard de la dame, on trouverait la clé. Ainsi, la légende raconte que seul celui qui résoudrait les énigmes de l'armure de fer, horloge à pendule et du portrait de la grande dame découvrirait la clé cachée et se libérerait du sommeil éternel de ce manoir.\n\n\n Mais attention, car ceux qui se trompaient \n n'en ressortaient jamais…"]
         texte_livre = ""
         texte_entrer_futur = ["Xini   :      fiou! tu es enfin de retour chez nous!","Xini   :      Vite la fleur sur ta tête grandit de plus en plus, va retrouver Docteur Z dans son laboratoire !", "Xini   :      Docteur Z se trouve derrière la grande porte au fond de la salle.","Xini   :      Je crois qu'il s'est enfermé à l'intérieur. Il faut un code à 4 lettre pour entrer dans son bureau.","Xini   :      le connaisant je suis sur qu'il sera en rapport avec l'informatique !","Xini   :      J'ai entendu dire qu'il avait noté chaque lettre du code sur un post-It dans chacune des salles. Va vite les fouiller" ]
         texte_dialogue_final = ["Docteur Z   :   Te voila enfin Nanit, je t'attendais.","Docteur Z   :      Vient ici Nanit, j'ai quelque chose à t'avouer.","Docteur Z   :      C'est moi qui t'ai envoyé dans le passé","Docteur Z   :      Je comprends ton incompréhension, mais j'ai eu une bonne raison d'avoir fait ça.","Docteur Z   :      Je me fais vieux et ma jeunesse s'est déjà envolée depuis bien longtemps.","Docteur Z   :      Cela fait depuis que j'ai mis les pieds dans cette ville, que je travaille jour et nuit sur le projet de ma vie ","Docteur Z   :      Le Project Z !","Docteur Z   :       c'est une machine à remonter dans le temps !! ","Docteur Z   :      Et c'est seulement après 70 ans de travail acharné que Le Projet Z arriva enfin à terme.","Docteur Z   :      Mais j'ai peur qu'après ma mort, d'autres scientifiques mal intentionné chercheront à me le  voler.","Docteur Z   :      J'ai donc besoin de quelqu'un de confiance qui saura protéger mon projet ","Docteur Z   :      et ce quelqu'un, c'est toi. Mais j'avais besoin de juger si tu étais prêt pour cette lourde tâche,","Docteur Z   :      et c'est pour cela que je t'ai envoyé voyager dans le passé. ","Docteur Z   :      Et ne t'inquiètes pas pour la fleur, elle n'avait que pour but de t'apprendre à gérer ton temps.","Docteur Z   :      Elle est inoffensive, je te la retirerai plus tard.","Docteur Z   :      Maintenant suis moi, ton enseignement de gardien du temps est loin d'être terminé ..."]
@@ -202,17 +222,21 @@ class Map_manager :
         texte_T = ["Sur le post-It il est écrit :  'T'"]
         texte_S = ["Sur le post-It vous arrivez a dechiffrer : 'S'"]
         
-        position_livre = (310,50)
-        dimmention_livre = (450,650)
-        position_tableaux = (210,50)
-        dimmentrion_tableaux = (600,600)
-        position_txt_tableaux = (255,610)
-        position_tiping_tableaux = (285,610)
 
-        dimmention_dialogue = (700,100)
+        dimmention_livre = (screen.get_height()//1.6,screen.get_height()//1.107692308)
+        position_livre = GLB.MID_H_W(dimmention_livre)
+        dimmentrion_tableaux = (screen.get_height()//1.2,screen.get_height()//1.2)
+        position_tableaux = GLB.MID_H_W(dimmentrion_tableaux)
+        position_txt_tableaux = (screen.get_width()//4.235294118,screen.get_height()//1.180327869)
+        position_tiping_tableaux = (screen.get_width()//3.789473684,screen.get_height()//1.180327869)
 
+
+        dimmention_armure = (screen.get_height()*0.8333333333333334,screen.get_height()*0.6944444444444444)
+        position_armure = GLB.MID_H_W(dimmention_armure)
+        position_txt_armure = (position_armure[0]*1.2,screen.get_height()*0.4861111111111111)
+        position_tiping_armure = (GLB.W_H(460,410))
         dialogue_de_manoir_moyen_test1 = [dialogue_actuelle,
-                                          stk_dialogue("lettre",texte_lettre,(600,650),(270,50),"lettre"),
+                                          stk_dialogue("lettre",texte_lettre,GLB.H(600,650),GLB.MID_H_W(GLB.H(600,650)),"lettre"),
                                           stk_dialogue("livre_force",texte_livre,dimmention_livre,position_livre,"livre"),
                                           stk_dialogue("livre_heure",texte_livre,dimmention_livre,position_livre,"livre"),
                                           stk_dialogue("livre_s",texte_livre,dimmention_livre,position_livre,"livre"),
@@ -221,9 +245,11 @@ class Map_manager :
                                           stk_dialogue("livre_le_monde",texte_livre,dimmention_livre,position_livre,"livre"),
                                           stk_dialogue("livre_gargantua",texte_livre, dimmention_livre,position_livre,"livre"),
                                           stk_dialogue("Grosse_Dame",["mon tout est un batiment","entrer votre reponse","Dans les livres tu trouveras le mot caché"],dimmention_dialogue,position_dialogue,"tiping","forteresse",True),
-                                          stk_dialogue("armure",["nombre a 3 chiffres"," "],(600,500),(240,110),"tiping","993",True,(315,350), position_tiping = (500,410))
+                                          stk_dialogue("armure",["nombre a 3 chiffres"," ","Non"],dimmention_armure,position_armure,"tiping","993",True,position_txt_armure, position_tiping =position_tiping_armure)
                                           ]
-        dialogue_furur =                [stk_dialogue("code",[" ","CODE INCORRECT"],(600,600),(240,50),"tiping","BITS",True,(395,380),position_tiping = (490,380)),
+        dialogue_horloge =              [stk_dialogue("dialogue_enter",["Xini   :      Ouah !!! c'est sombre ici !", "Xini   :      heuresement que tu a ta lampe ! "],dimmention_dialogue,position_dialogue,"boite_dialogues",cinematique=True)
+                                         ]
+        dialogue_furur =                [stk_dialogue("code",[" ","CODE INCORRECT"],GLB.H(600,600),GLB.MID_H_W(GLB.H(600,600)),"tiping","BITS",True,GLB.W_H(395,380),position_tiping = GLB.W_H(490,380)),
                                          stk_dialogue("debut",texte_entrer_futur,dimmention_dialogue,position_dialogue,"boite_dialogues",cinematique = True),
                                          stk_dialogue("dialogue_final",texte_dialogue_final,dimmention_dialogue,position_dialogue,"boite_dialogues",cinematique = True),
                                          stk_dialogue("B",texte_B,dimmention_dialogue,position_dialogue,"boite_dialogues"),
@@ -242,11 +268,11 @@ class Map_manager :
                                          stk_dialogue("2",["Xini   :      vite part ce couloir m'angoisse !"],dimmention_dialogue,position_dialogue,"boite_dialogues",cinematique = True),
                                          stk_dialogue("3",["Xini   :      Voila la machine a voyager dans le temps !"],dimmention_dialogue,position_dialogue,"boite_dialogues",cinematique = True)
                                          ]
-        dialogue_enigme_chimie =        [stk_dialogue("chimie_",["ajouter les lettres entre elles pour crée la solution dans l'ordre alphabetique exemple : ACD"," ","Perdu ! "],(600,600),(240,60),"tiping","BCD",True,(300,570))
+        dialogue_enigme_chimie =        [stk_dialogue("chimie_",["ajouter les lettres entre elles pour crée la solution dans l'ordre alphabetique exemple : ACD"," ","Perdu ! "],GLB.H(600,600),GLB.W_H(240,60),"tiping","BCD",True,GLB.W_H(300,570))
                                         ]
-        dialogues_enigme_goblet =       [stk_dialogue("goblet_",["entrer un lettre en majuscule ,","entrer votre reponse"],(600,600),position_livre,"tiping","D",True,(346,574))
-
-        ]
+        dialogues_enigme_goblet =       [stk_dialogue("goblet_",["entrer un lettre en majuscule ,","entrer votre reponse"],GLB.H(600,600),position_livre,"tiping","D",True,GLB.W_H(346,574))
+                                        ]
+        
         clef_enigme_goblet = {}
         clef_enigme_goblet["goblet_"] = False
 
@@ -257,7 +283,7 @@ class Map_manager :
 
 # ---------------------------------- élément mouvant screen ----------------------------- #
         # [nom : str, nombre_de_sprite : int, position : tuple(x,y), cb1 de frame entre les images : int ]
-        sprite_mouvement_horloge = ['premier_plan',10,(0,0), 6 ]
+        sprite_mouvement_horloge = ['premier_plan',1,(0,0), 1 ]
 
 # ---------------------------------inforamtion --------------------------------------------- #
         self.info = ['e pour examiner','TAB','SHIFT','e pour sortir',""]
@@ -265,25 +291,57 @@ class Map_manager :
         self.infos_manoir = {}
         for i in self.info :
             self.infos_manoir[i] = (inforamtion(self.screen,f"{i}"))
-# ------------------------------------- musique --------------------------------------------#
+    # ------------------------------------- musique --------------------------------------------#
         self.musique_debaze = self.stockage_valeur.musique_defaut
         musique_manoir = "Manoir"
         musique_future = "futur"
+    # -------------------------------- lumiere ------------------------------ #
+        # --------- lumiere_laby --------- #
+        taille_lampe_laby = round(self.screen.get_width()*0.4)
+        lampe_labyrhint = light.pixel_shader(taille_lampe_laby,(92, 158, 255),1,False)
+        labythinthe_lumiere_P = light.LIGHT(taille_lampe_laby,lampe_labyrhint)
+        labythinthe_lumiere_P = stk_Light(labythinthe_lumiere_P,"player")
+        labythinthe_lumiere = Lights([labythinthe_lumiere_P],light.global_light(self.screen.get_size(),7),[])
+
+        # --------- lumiere_Manoir --------- #
+        taille_lampe_Manoir = round(self.screen.get_height()*0.7)
+        lampe_Manoir = light.pixel_shader(taille_lampe_laby,(255,215,0),1,False)
+        Manoir_lumiere_P = light.LIGHT(taille_lampe_Manoir,lampe_Manoir)
+        Manoir_lumiere_P = stk_Light(Manoir_lumiere_P,"player")
+        Manoir_lumiere = Lights([Manoir_lumiere_P],light.global_light(self.screen.get_size(),100),[])
+        
+        # --------- lumiere_couloir --------- #
+        taille_lampe_couloir = round(self.screen.get_height() * 0.7)
+        lampe_couloir = light.pixel_shader(taille_lampe_couloir,(92, 208, 255),1,False)
+        couloir_lumiere_P = light.LIGHT(taille_lampe_couloir,lampe_couloir)
+        couloir_lumiere_P = stk_Light(couloir_lumiere_P,"player")
+        couloir_lumiere = Lights([couloir_lumiere_P],light.global_light(self.screen.get_size(),40),[])
+
+        # --------- lumiere_futur --------- #
+
+        """        taille_lampe_futur = round(self.screen.get_height()*0.7)
+        lampe_futur = light.pixel_shader(taille_lampe_futur,(230, 255, 255),1,False)
+        futur_lumiere_P = light.LIGHT(taille_lampe_futur,lampe_futur)
+        futur_lumiere_P = stk_Light(futur_lumiere_P,"player")
+        futur_lumiere = Lights([futur_lumiere_P],light.global_light(self.screen.get_size(),80),[])"""
+        futur_lumiere = None
+
+        
        
 
    
 #------------------------------------------suite---------------------------------------------#
 
 
-        self.enregistrer_une_map("interieur","Manoir",portail_manoir_moyen_test1,portes_manoir, énigme_nom["Manoir"], nombre_sprite_enigme["Manoir"], dialogue_de_manoir_moyen_test1,clefs = clefs_manoir, musique = musique_manoir)
-        self.enregistrer_une_map("enigme_inquietant","enigme_horloge",portail_enigme_horloge,[],sprite_en_mouvent_screen = sprite_mouvement_horloge,musique = musique_manoir) 
-        self.enregistrer_une_map("interieur", "futur",portail_map_futur,portes_futures,énigme_nom["futur"],nombre_sprite_enigme["futur"], dialogue_furur,clefs = clefs_future,musique = musique_future)
-        self.enregistrer_une_map("interieur","couloir_fin",portail_couloir_fin,[],énigme_nom["couloir_fin"],nombre_sprite_enigme["couloir_fin"],dialogue_couloir_fin,musique = musique_manoir)
+        self.enregistrer_une_map("interieur","Manoir",portail_manoir_moyen_test1,portes_manoir, énigme_nom["Manoir"], nombre_sprite_enigme["Manoir"], dialogue_de_manoir_moyen_test1,clefs = clefs_manoir, musique = musique_manoir,lumiere=Manoir_lumiere)
+        self.enregistrer_une_map("enigme_inquietant","enigme_horloge",portail_enigme_horloge,[], liste_dialogues=dialogue_horloge, sprite_en_mouvent_screen=sprite_mouvement_horloge, musique=musique_manoir,lumiere=labythinthe_lumiere) 
+        self.enregistrer_une_map("interieur", "futur",portail_map_futur, portes_futures, énigme_nom["futur"], nombre_sprite_enigme["futur"], dialogue_furur, clefs=clefs_future, musique=musique_future,lumiere=futur_lumiere)
+        self.enregistrer_une_map("interieur","couloir_fin",portail_couloir_fin,[],énigme_nom["couloir_fin"],nombre_sprite_enigme["couloir_fin"],dialogue_couloir_fin,musique=musique_manoir,lumiere=couloir_lumiere)
         self.enregistrer_une_map("interieur","enigme_portail", portail_enigme_portail,musique = musique_future)
         self.enregistrer_une_map("interieur","chimie", portail_chimie,liste_dialogues = dialogue_enigme_chimie,musique = musique_future)
         self.enregistrer_une_map("interieur","tableau",portail_tableau,liste_dialogues = dialogue_tableau, clefs = clef_enigme_tableau,musique = musique_future)
         self.enregistrer_une_map("interieur","enigme_goblet",portail_goblet,liste_dialogues= dialogues_enigme_goblet,clefs = clef_enigme_goblet , musique = musique_future)
-        self.tp_joueur('spawn',True)
+        self.tp_joueur('spawn')
         self.changer_musique(self.curent_map,True)
         self.chec_enigme_clefs()
         self.premier_passage_Globale = False
@@ -293,7 +351,7 @@ class Map_manager :
     #--------------------------------------------- Fonction ---------------------------------------------------#
 
 
-    def enregistrer_une_map(self, map_type : str , name_map : str, list_portail : list[Portail], list_porte : list[Stk_porte] = []  , name_enigme = [], nombre_sprite_enigme = 0 ,liste_dialogues : list[stk_dialogue] = [] , sprite_en_mouvent_screen = [],clefs = {},musique = None) : #nom_enigme est une list avec le nom de l'enigme
+    def enregistrer_une_map(self, map_type : str , name_map : str, list_portail : list[Portail], list_porte : list[Stk_porte] = []  , name_enigme = [], nombre_sprite_enigme = 0 ,liste_dialogues : list[stk_dialogue] = [] , sprite_en_mouvent_screen = [],clefs = {},musique = None, lumiere : stk_Light=None) : #nom_enigme est une list avec le nom de l'enigme
         """fonction qui créé la map avec tout les paramettres, la stock dans un dictionaire avec le nom de la map en key et un object Map en value"""
         
         tmx_data = pytmx.util_pygame.load_pygame(f"sources/map/map_data/{name_map}.tmx")#on charge la bonne map Kappa
@@ -318,13 +376,16 @@ class Map_manager :
         
         #gerer le zoom de la cam :
         if map_type == "exterieur" :
-            map_layer.zoom = 1.5
+            map_layer.zoom = self.screen.get_width()//720
         elif map_type == "enigme_inquietant":
-            map_layer.zoom = 2
+            map_layer.zoom = self.screen.get_width()//540
         elif map_type == "interieur" :
-            map_layer.zoom = 2.15
+            map_layer.zoom = self.screen.get_width()//502.3255814
         elif map_type == "test" :
-            map_layer.zoom = 2
+            map_layer.zoom = map_layer.zoom = self.screen.get_width()//540
+        else :
+            map_layer.zoom = map_layer.zoom = self.screen.get_width()//540
+        
 
         self.spawn = tmx_data.get_object_by_name('spawn')
         
@@ -343,6 +404,7 @@ class Map_manager :
         
         group = pyscroll.PyscrollGroup(map_layer = map_layer, default_layer = 5)
         group.add(self.player)
+        
         
        
 
@@ -378,20 +440,40 @@ class Map_manager :
             porte.porte.dialogue =  Dialogue(self.screen,d)
             list_Portes[porte.porte.nom] = porte.porte
             dialogues_final[porte.porte.nom] = porte.porte.dialogue
+        if lumiere != None :
+            lumiere = Lights(lumiere.lights, lumiere.global_light, lumiere.collision)
+            for obj in tmx_data.objects :
+                if obj.type == "light" :
+                    if obj.name == "post_it" : 
+                        light_object_surf = light.pixel_shader(int(self.screen.get_height()*0.25),(255, 215, 0),0.7,False)
+                        light_object = light.LIGHT(self.screen.get_height()*0.25,light_object_surf)
+                    else : 
+                        light_object_surf = light.pixel_shader(int(self.screen.get_height()*0.5),(255, 215, 0),1,False)
+                        light_object = light.LIGHT(self.screen.get_height()*0.5,light_object_surf)
+                    
+                    Light_fini_obj = stk_Light(light_object,obj.name,(obj.x,obj.y))
+                    lumiere.lights.append(Light_fini_obj)
+                elif obj.type == "light_col" or obj.name == "light_col" :
+                    lumiere.collision.append(pygame.Rect(obj.x,obj.y,obj.width,obj.height))
 
-                
         #on crée un object Map 
-        self.maps[name_map] = Map(map_type, name_map, self.murs, group, tmx_data, self.spawn, list_portail, name_enigme, enigme_.enigmes,dialogues_final , sprites_mouvant ,zonne_afficher_info,list_Portes,clefs,musique) 
+        self.maps[name_map] = Map(map_type, name_map, self.murs, group, tmx_data, self.spawn, list_portail, name_enigme, enigme_.enigmes,dialogues_final , sprites_mouvant ,zonne_afficher_info,list_Portes,clefs,musique,lumiere)
+
         
         
     
-    def get_map(self,n = None) -> Map : 
-        if n == None :
-            return self.maps[self.curent_map]
-        else : 
-            return self.maps[n]
+    def get_map(self, n=None)-> Map : 
+        if n == None : return self.maps[self.curent_map]
+        else : return self.maps[n]
     def get_group(self,name_map = None) -> pyscroll.group.PyscrollGroup : return self.get_map(name_map).group
-    def get_murs(self,name_map = None) -> list[pygame.rect.Rect] : return self.get_map(name_map).murs 
+    def get_murs(self,name_map = None) -> list[pygame.rect.Rect] : return self.get_map(name_map).murs
+    def get_LIGHT(self, name_map=None)-> list[light.LIGHT] :
+        l = []
+        for L in self.get_stk_Light(name_map) : l.append(L.Light)
+        return l
+    def get_stk_Light(self,name_map=None)-> list[stk_Light] : return self.get_Light(name_map).lights
+    def get_Light(self, name_map=None)-> Lights : return self.get_map(name_map).lumiere
+    def get_col_light(self,name_map = None)-> list[pygame.Rect] : return self.get_map(name_map).lumiere.collision
     def get_object(self, name,name_map = None)-> pytmx.TiledObject : return self.get_map(name_map).tmx_data.get_object_by_name(str(name))
     def get_tmx_data(self,name_map = None)-> pytmx.TiledMap : return self.get_map(name_map).tmx_data
     def get_enigme(self,nom, name_map = None)  : return self.get_map(name_map).enigmes[nom]
@@ -399,8 +481,7 @@ class Map_manager :
     def get_sprite_nombre_enigme(self,nom,name_map = None)-> int : return self.get_cara_sprite_enigme(nom,name_map).nombre_enigme
     def get_Dialogues(self,nom_map = None)-> dict : return self.get_map(nom_map).Dialogue
     def get_Dialogue(self,name = None,nom_map = None) -> Dialogue: 
-        if name == None :
-            return self.get_map(nom_map).Dialogue[self.curent_dialogue]
+        if name == None : return self.get_map(nom_map).Dialogue[self.curent_dialogue]
         return self.get_map(nom_map).Dialogue[name]
     def get_element_mouvant_screen(self,nom_map = None) -> list[sprite_mouvent_screen]: return self.get_map(nom_map).element_mouvant_screen
     def get_collision_info(self,name_map = None)-> dict: return self.get_map(name_map).zonne_afficher_info
@@ -413,18 +494,17 @@ class Map_manager :
     def get_clefs(self,name_map = None) -> dict : return self.get_map(name_map).clefs
     def get_name_maps(self) -> list[str] :
         liste_nom = []
-        for map in self.maps.values() :
-            liste_nom.append(map.name)
+        for map in self.maps.values() : liste_nom.append(map.name)
         return liste_nom
     def get_sound(self, nom_map : str = None) -> pygame.mixer.Sound : return self.get_stockage().musiques[self.get_map(nom_map).musique]
     def get_stockage(self) -> Stockage : return self.stockage_valeur
-    def get_affichagation(self)-> bool :
+    def get_affichagation(self)-> bool : 
         for d in list(self.get_Dialogues().keys()) :
-            if self.get_Dialogue(d).affichagation : return True 
+            if self.get_Dialogue(d).affichagation : return True
         else : return False
 
 
-    def tp_joueur(self, point_de_tp,debut = False)  :
+    def tp_joueur(self, point_de_tp)  :
         """ teléporte le joueur a un endroit donner ( poin de tp)"""
         if point_de_tp == list[int] :
             point = point_de_tp
@@ -449,9 +529,14 @@ class Map_manager :
                     copy_portail = portail
                     if copy_portail.monde_arriver != self.curent_map :
                         self.changer_musique(copy_portail.monde_arriver)
+                    if self.get_map(copy_portail.monde_arriver).type == self.get_map().type : zoom = None
+                    elif self.get_map(copy_portail.monde_arriver).type == "enigme_inquietant" : zoom = True
+                    else : zoom = False
+                    self.player.changer_zoom(zoom)
                     self.curent_map = portail.monde_arriver
                     if portail.poin_de_sortie == "clef_enigme_portail" :
                         self.get_map("futur").clefs["portail"] = True
+                    
                     self.tp_joueur(copy_portail.poin_de_sortie)
                     
                 elif self.player.position_pour_les_colision.colliderect(rect) and portail.interact :
@@ -459,6 +544,10 @@ class Map_manager :
                         copy_portail = portail
                         if copy_portail.monde_arriver != self.curent_map :
                             self.changer_musique(copy_portail.monde_arriver)
+                        if self.get_map(copy_portail.monde_arriver).type == self.get_map().type : zoom = None
+                        elif self.get_map(copy_portail.monde_arriver).type == "enigme_inquietant" : zoom = True
+                        else : zoom = False
+                        self.player.changer_zoom(zoom)
                         self.curent_map = portail.monde_arriver
                         if portail.poin_de_sortie == "sortie horloge_labyrhinte" :
                             self.get_map("Manoir").clefs["horloge"] = True
@@ -476,6 +565,10 @@ class Map_manager :
                 if self.player.position_pour_les_colision.colliderect(rect) :
                     if touches[pygame.K_e] :
                         copy_enigme = enigme
+                        if self.get_map(copy_enigme.monde_de_enigme).type == self.get_map().type : zoom = None
+                        elif self.get_map(copy_enigme.monde_de_enigme).type == "enigme_inquietant" : zoom = True
+                        else : zoom = False
+                        self.player.changer_zoom(zoom)
                         self.curent_map = enigme.monde_de_enigme
                         self.tp_joueur(copy_enigme.spawn)
         
@@ -516,7 +609,7 @@ class Map_manager :
             self.player.vitesse = 3
             
         elif self.get_map().type == "enigme_inquietant" :
-            self.player.vitesse = 4
+            self.player.vitesse = 3
         elif self.get_map().type == "test" :
             self.player.vitesse = 6
     
@@ -564,12 +657,8 @@ class Map_manager :
         """ afficher le group pyscroll de la map"""
         self.get_group().draw(self.screen)
         self.get_group().center(self.player.rect.center)
-        
-        
-        if self.get_map().type == "enigme_inquietant" :
-            self.dessier_element_mouvant_screen()
         self.afficher_elements_fixe_map_mouvant(frame)
-        self.chec_info()
+        
 
     
 
@@ -620,14 +709,14 @@ class Map_manager :
         
         return collided
     
-    def chec_colision_mur(self,mouvement) :
+    def chec_colision_mur(self,movement) :
         """
     Résolution des collisions
     Nous séparons le mouvement x et y , car cela peut engendrer des problemes
     """
     
         rect = self.player.position_pour_les_colision.copy()
-        movement = mouvement
+        movement
         
         rect.x += movement[0]
         colliders = self.collide(self.get_murs() , rect)
@@ -657,6 +746,7 @@ class Map_manager :
             elif(movement[1] > 0):
                 rect.bottom = collider.top
         
+        self.player.deplacement_final = [rect.x - self.player.position.x, rect.y - self.player.position.y]
         self.player.position = pygame.Rect(rect.x, rect.y,rect.width,rect.height)
     
     def afficher_elements_fixe_map_mouvant(self,frame):
@@ -736,7 +826,7 @@ class Map_manager :
     def passer_devant(self) :
         """regle le layer des information de la map """
         for i in range(15) :
-            if i != 7 : 
+            if i != 7 and i != 8 : 
                 for sprite in self.get_group().get_sprites_from_layer(i) :
 
                     if not sprite.pas_bouger :

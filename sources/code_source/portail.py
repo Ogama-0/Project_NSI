@@ -2,6 +2,8 @@ import pygame
 from dataclasses import dataclass
 from sources.code_source.enigme_code import enigme_sprite,interact_ecrit,dialogue_enigme_setup
 from sources.code_source.dialogue import Dialogue
+from sources.code_source.Globale import Globale as GLB
+
 
 @dataclass
 class Stk_porte :
@@ -70,7 +72,7 @@ class Setup_Porte :
         
         sprite_ombre = enigme_sprite(rect_ombre, sprites_ombre, 0, group, stk_porte.layer,stk_porte.distance_bottom,True)
         
-        dialogueu = stk_dialogue(stk_porte.nom,stk_porte.dia_fermer,(700,100),(200,600),"boite_dialogues")
+        dialogueu = stk_dialogue(stk_porte.nom,stk_porte.dia_fermer,GLB.W_H(700,100),GLB.W_H(200,600),"boite_dialogues")
 
         dialogue = dialogue_enigme_setup(tmx_data,dialogueu)
         dialogues = dialogue.dialogues

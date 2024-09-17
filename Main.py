@@ -8,27 +8,36 @@
 #           Ewen BONNET
 #
 # Created : entre 01/03/2023 et 17/04/2023
-# Copyright : (c) Oscar Cornut 2023
+# Copyright : (c) Oscar Cornut 2023>  
 # Licence : GPL V3+
 # ----------------------------------------------------------------------------------------------------------------------------------------------- #
-import pygame
+import pygame, moderngl
+from pygame.locals import *
+
 from sources.code_source.joureurCopie import Player
 from sources.code_source.Cartecode import Map_manager
 from sources.code_source.Menu_princ import Menu, Degrader
 from sources.code_source.dialogue import Dialogue
+from sources.code_source.shaders import Shader_eau,shader_None
 from dataclasses import dataclass
+from sources.code_source.Globale import Globale as GLB
+
 import time
 @dataclass
 class stk_bouton :
     nom : str
     position : tuple[int]
+    size : tuple[int]
     cliquable : bool = False
 
 
 class Game : # ici c'est la classe scène
     
     def __init__ (self) :
-        self.screen = pygame.display.set_mode((1080,720))
+        self.frame_total = 0
+        self.display = pygame.display.set_mode(GLB.SIZE_SCREEN,pygame.OPENGL | pygame.DOUBLEBUF)
+        self.screen = pygame.Surface(self.display.get_size())
+        self.shaders = shader_None()
         pygame.display.set_caption('Project_Z')
         self.continuer = True
         self.clock = pygame.time.Clock()
@@ -60,42 +69,46 @@ class Game : # ici c'est la classe scène
     # ------------------------------ GESTION DES MENUS ---------------------------- #
     # pour rajouter un bouton a un menue le créé juste en dessou, en faisant une list avec ["le nom du bouton (le fichier image est chercher avec sprite/autre/menu/{nom}_bouton et sprite/autre/menu/{nom}_bouton_appuyer pour quand on passe la souris dessu),(les coo du bouton dans le sceen)"]
         # boutons des menus
-        hauteur_minimum = 230
-        x_bouton = 419
-        bouton_start = stk_bouton("start",(x_bouton,hauteur_minimum))
-        bouton_options = stk_bouton("option",(x_bouton,hauteur_minimum + 60*2))
-        bouton_credit = stk_bouton("credit",(x_bouton,hauteur_minimum + 60*4))
-        bouton_switch = stk_bouton("switch",(x_bouton,hauteur_minimum + 60*2))
-        bouton_musique = stk_bouton("musique",(x_bouton,hauteur_minimum + 60*4),True)
-        bouton_comande = stk_bouton("comande",(x_bouton,hauteur_minimum + 60*2))
-        bouton_reprendre = stk_bouton("resume",(x_bouton,hauteur_minimum))
-        bouton_quitter_menu = stk_bouton("quitter_menu",(90,90))
+        size = self.screen.get_size()
+        rect = self.screen.get_rect()
+        bouton_size = int(size[0]/4.122137405),int(size[1]/9.350649351)
+        hauteur_minimum = size[1]//3.4
+        x_bouton = size[0]//2-bouton_size[0]//2
+        largeur_bouton = size[1]//12 
+        bouton_start = stk_bouton("start",(x_bouton,hauteur_minimum),bouton_size)
+        bouton_options = stk_bouton("option",(x_bouton,hauteur_minimum + largeur_bouton*2),bouton_size)
+        bouton_credit = stk_bouton("credit",(x_bouton,hauteur_minimum + largeur_bouton*4),bouton_size)
+        bouton_switch = stk_bouton("switch",(x_bouton,hauteur_minimum + largeur_bouton*2),bouton_size)
+        bouton_musique = stk_bouton("musique",(x_bouton,hauteur_minimum + largeur_bouton*4),bouton_size,True)
+        bouton_comande = stk_bouton("comande",(x_bouton,hauteur_minimum + largeur_bouton*2),bouton_size)
+        bouton_reprendre = stk_bouton("resume",(x_bouton,hauteur_minimum),bouton_size)
+        bouton_quitter_menu = stk_bouton("quitter_menu",(size[0]/12,size[0]/12),(90,90))
 
         self.frame_ = 0
 
         background_menu_principale = []
         for i in range(3) :
-            background_menu_principale.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Principal_{i+1}.png"),(1080,720)))
+            background_menu_principale.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Principal_{i+1}.png"),size))
         
         background_menue_pause = []
         for i in range(3) :
-            background_menue_pause.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Pause_{i+1}.png"),(1080,720)))
+            background_menue_pause.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Pause_{i+1}.png"),size))
 
         background_menue_option = []
         for i in range(3) :
-            background_menue_option.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Option_{i+1}.png"),(1080,720)))
+            background_menue_option.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Option_{i+1}.png"),size))
          
         background_menue_comande = []
         for i in range(3) : 
-            background_menue_comande.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Commande_{i+1}.png"),(1080,720)))
+            background_menue_comande.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Commande_{i+1}.png"),size))
         
         background_FIN = []
         for i in range(3) :
-            background_FIN.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_FIN_{i+1}.png"),(1080,720)))
+            background_FIN.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_FIN_{i+1}.png"),size))
 
         background_credit = []
         for i in range(1) :
-            background_credit.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_credit_{i+1}.png"),(1080,720)))
+            background_credit.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_credit_{i+1}.png"),size))
         
 
         self.premier_passage4 = True
@@ -140,24 +153,22 @@ class Game : # ici c'est la classe scène
 
         
         # --------------------------- clef ----------------------------------#
-        self.clef_image = pygame.image.load("sources/sprite/sprint_enigme/autre/clef.png")
-        self.pass_image = pygame.transform.scale(pygame.image.load("sources/sprite/sprint_enigme/autre/passe_future.png"),(64,64))
+        self.clef_image = pygame.transform.scale(pygame.image.load("sources/sprite/sprint_enigme/autre/clef.png"),(int(size[0]//33.75),int(size[1]//11.25)))
+        self.pass_image = pygame.transform.scale(pygame.image.load("sources/sprite/sprint_enigme/autre/passe_future.png"),(int(size[0]//33.75),int(size[1]//16.875)))
         self.position_clef = {}
-
         for nom_map in self.map_manager.maps.keys() :
-            x = 930
-            y = 70
+            x = self.screen.get_width() - self.clef_image.get_width()*5
+            y = self.screen.get_height()//10.28571429
             for k in self.map_manager.get_map(nom_map).clefs.keys() :
-                
                 if k != nom_map :
-                    x += 30
-                    if x >= 1080 :
-                        y += 70
-                        x = 960
+                    x += self.clef_image.get_width()
+                    if x >= self.screen.get_width() - self.clef_image.get_width() - 1 :
+                        y += self.clef_image.get_height()*1.3
+                        x = self.screen.get_width() - self.clef_image.get_width()*4
                     self.position_clef[k] = (x,y)
 
         
-        #------------------------------Dialogue------------------------------#
+        # ---------------------------- Dialogue ----------------------------- #  
         self.afficeher_texte_tiping = True
         self.touches_une_fois_espace = False
         self.touches_une_fois_e = False
@@ -196,9 +207,6 @@ class Game : # ici c'est la classe scène
 
         if self.stok != seconde :
             self.seconde_de_jeu +=1
-        
-        
-        
         self.nombre_de_frame += 1
         if self.nombre_de_frame == 60 :
             self.nombre_de_frame = 0
@@ -224,37 +232,33 @@ class Game : # ici c'est la classe scène
         
         """savoir quelle touches sont activer et modifi les variable en consequance"""
 
-        a=0 #savoir s i l'anime s'est deja passer  
         if self.touches[pygame.K_UP] :
             self.player.velocite[1] = -1
-            self.player.etat_regard_yeux_nanit['etat_regard'] = 3
+            self.player.curent_sprite = "dos"
         elif self.touches[pygame.K_DOWN] :
             self.player.velocite[1] = 1
-            self.player.etat_regard_yeux_nanit['etat_regard'] = 4
+            self.player.curent_sprite = "face"
         else :
             self.player.velocite[1] = 0
-            a+=1
 
         if self.touches[pygame.K_LEFT] :
             self.player.velocite[0] = -1
-            self.player.etat_regard_yeux_nanit['etat_regard'] = 1 
+            self.player.curent_sprite = "gauche"
         elif self.touches[pygame.K_RIGHT] :
             self.player.velocite[0] = 1
-            self.player.etat_regard_yeux_nanit['etat_regard'] = 2
+            self.player.curent_sprite = "droite"
         else :
             self.player.velocite[0] = 0
-            a+=1
         if self.touches[pygame.K_UP] and self.touches[pygame.K_RIGHT] :
-            self.player.etat_regard_yeux_nanit['etat_regard'] = 5
+            self.player.curent_sprite = "dos_droite"
         if self.touches[pygame.K_UP] and self.touches[pygame.K_LEFT] :
-            self.player.etat_regard_yeux_nanit['etat_regard'] = 6
+            self.player.curent_sprite = "dos_gauche"
         self.player.vitesse += self.player.sprint
-        
-        self.player.deplacement = self.player.velocite[0]*self.player.vitesse, self.player.velocite[1]*self.player.vitesse
-         
 
+        self.player.deplacement = self.player.velocite[0]*self.player.vitesse, self.player.velocite[1]*self.player.vitesse
+        
         # -----------------Animation----------------- #
-        self.player.Animation(a)
+        
 
         
 
@@ -324,6 +328,7 @@ class Game : # ici c'est la classe scène
         if not self.get_affichagation() :
             self.gestion_sprint()
             self.gestion_deplacement()
+        self.player.Animation()
         
 
     
@@ -331,8 +336,6 @@ class Game : # ici c'est la classe scène
         """gestion de logique et la misa a jour des différents perso du jeu et les colisions"""
         if self.get_affichagation() :
             self.tiping = self.map_manager.get_tiping()
-
-        
         self.map_manager.update(touches,self.touches_une_fois_e)
         
         self.update_dialogue()
@@ -359,19 +362,13 @@ class Game : # ici c'est la classe scène
                         self.affichage_clefs(k)
                 
 
-    
     def afficher_pass(self,k) :
         """afffiche le pass"""
         self.screen.blit(self.pass_image,self.position_clef[k])
-                    
-    
-
+                  
     def affichage_clefs(self,k) :
         """affiche la celf"""
         self.screen.blit(self.clef_image,self.position_clef[k])
-
-            
-            
 
     def texte_to_surf(self,txt : str, color = (0,0,0), background = None, px_de_long : int = 0) :
         "convertie un str en surf affichage avec blit()"
@@ -382,29 +379,22 @@ class Game : # ici c'est la classe scène
     def get_dialogue(self,nom = None) -> Dialogue : return self.map_manager.get_Dialogue(nom)
     def get_curent_tiping(self) -> bool : return self.get_stockage().curent_tiping         
     def get_stockage(self): return self.map_manager.stockage_valeur
-        
+    def afficher_fps(self): self.screen.blit(self.font_debaze.render(f" FPS : {round(self.clock.get_fps(),1)}",True,(255,255,255)),(self.screen.get_width()//1.1,self.screen.get_height()//1.1))
 
 
     def affichage(self) : #tout ce qui vas etre afficher dans le screen
         """ gère tout ce qui s'affiche sur le screen"""
-         #initialisation de l'écrant (c'étais au debut je laisse tout pour l'instant pour corriger des erreurs plus facilement)
-        
-        
         self.map_manager.dessier_la_carte(self.nombre_de_frame)
-
-
+        self.update_light()
+        self.map_manager.chec_info()
         self.afficher_minuteur()
-
         self.affichage_dialogue()
-
         self.affichage_tiping()
-       
         self.afficher_clefs()
-        if not self.get_affichagation() :
+        if not self.get_affichagation() : 
             self.map_manager.stockage_valeur.curent_tiping = False 
-        
-        
-    
+
+       
     def afficher_degrader(self) : 
         if self.get_stockage().curent_degrader :
             self.degrader.curent_degrader = True
@@ -421,30 +411,18 @@ class Game : # ici c'est la classe scène
     
     def afficher_minuteur(self) :
         """permet d'afficher le minuteur de la fonction minuteur() avec la police monospace"""
-        
-        
         if  self.heure_de_jeu == 0 :
-            if self.minute_de_jeu == 0 :
-                self.texte_minuteur = f"{self.seconde_de_jeu} seconde"
-                
-            else :
-                self.texte_minuteur = f"{self.minute_de_jeu} minute et {self.seconde_de_jeu} seconde"
+            if self.minute_de_jeu == 0 : self.texte_minuteur = f"{self.seconde_de_jeu} secondes"
+            else : self.texte_minuteur = f"{self.minute_de_jeu} minutes et {self.seconde_de_jeu} secondes"
         else :
-            if self.minute_de_jeu == 0 :
-                self.texte_minuteur = f"{self.heure_de_jeu} heure et {self.seconde_de_jeu} seconde"
-            else :
-                self.texte_minuteur = f"{self.heure_de_jeu} heure {self.minute_de_jeu} minute et {self.seconde_de_jeu} seconde"
-        
-
+            if self.minute_de_jeu == 0 : self.texte_minuteur = f"{self.heure_de_jeu} heure et {self.seconde_de_jeu} secondes"
+            else : self.texte_minuteur = f"{self.heure_de_jeu} heure {self.minute_de_jeu} minutes et {self.seconde_de_jeu} secondes"
         self.score_text = self.font_debaze.render(f"temps de jeu : {self.texte_minuteur}",9,(255,255,255))
-
         self.screen.blit(self.score_text,(20,20))
 
     def run_game(self) :
-        
         self.minueur()
         self.GestionEvent()
-        
         self.update(self.touches)            
         self.affichage()
         
@@ -498,10 +476,6 @@ class Game : # ici c'est la classe scène
         bouton_appuyer = self.menu_princ_credi.afficher(self.clique_souris)
         if bouton_appuyer == "quitter_menu" :
             self.menu_credit_princ_actif = False
-
-
-        
-
 
 
     def affichage_menu_princ(self) :
@@ -620,7 +594,8 @@ class Game : # ici c'est la classe scène
                 self.get_stockage().dialogue_afficher = True
                 return
             else : self.get_stockage().dialogue_afficher = False
-        
+
+
     def decrechendo(self):
         if self.get_stockage().decrechendo :
             if self.get_stockage().volume_musique >= 0.001 :
@@ -630,39 +605,99 @@ class Game : # ici c'est la classe scène
                 self.get_stockage().decrechendo = False
     
     def afficher_autres_global(self) :
-            self.afficher_degrader()
-            self.decrechendo()
+        
+        self.afficher_degrader()
+        self.afficher_fps()
+        self.decrechendo()
+
+    def gestion_Shaders(self):
+        self.tex = self.shaders.surf_to_texture(self.screen)
+        self.tex.use(0) 
+        self.shaders.program['tex'] = 0
+        self.shaders.program['time'] = self.frame_total
+        self.shaders.render_object.render(mode=moderngl.TRIANGLE_STRIP)
+
+    def update_light(self) :
+        
+        if self.map_manager.get_map().lumiere != None :
+
+            vecteur_mapscreen = [self.map_manager.get_group()._map_layer.get_center_offset()[0],self.map_manager.get_group()._map_layer.get_center_offset()[1]]
+            
+            radius = []
+            for Light in self.map_manager.get_LIGHT() :
+                radius.append(Light.radius)
+            max_radius = max(radius)
+            size_lights_display = GLB.SIZE_SCREEN[0] + max_radius * 2, GLB.SIZE_SCREEN[1] + max_radius * 2
+            lights_display = pygame.Surface(size_lights_display)
+            lights_display.blit(self.map_manager.get_map().lumiere.global_light,(max_radius, max_radius))
+            Rects = self.get_col_light_screen(max_radius)
+            x = (self.player.position_pour_les_colision.centerx + vecteur_mapscreen[0]) * self.map_manager.get_group()._map_layer.zoom
+            y = (self.player.position_pour_les_colision.centery + vecteur_mapscreen[1]) * self.map_manager.get_group()._map_layer.zoom
+            self.map_manager.get_map().lumiere.afficher(Rects,lights_display,x,y,self.map_manager.get_group()._map_layer.get_center_offset(),self.map_manager.get_group()._map_layer.zoom,max_radius,self.player.deplacement)
+            self.screen.blit(lights_display, (- max_radius + self.player.deplacement_final[0]*2 , - max_radius + self.player.deplacement_final[1]*2),special_flags = BLEND_RGBA_MULT)
+
+    
+    def get_col_light_screen(self, max_radius:int=0)-> list[pygame.rect.Rect] :
+        vecteur_mapscreen= [self.map_manager.get_group()._map_layer.get_center_offset()[0],self.map_manager.get_group()._map_layer.get_center_offset()[1]]
+
+        murs_screen = []
+        murs_map = self.map_manager.get_col_light()
+        for mur in murs_map :
+            x1 = ((mur.x + vecteur_mapscreen[0]) * self.map_manager.get_group()._map_layer.zoom) + max_radius
+            x2 = ((mur.x + mur.width + vecteur_mapscreen[0]) * self.map_manager.get_group()._map_layer.zoom) + max_radius
+            
+            width_mur = x2-x1
+            y1 = ((mur.y + vecteur_mapscreen[1]) * self.map_manager.get_group()._map_layer.zoom) + max_radius
+            y2 = ((mur.y + mur.height + vecteur_mapscreen[1]) * self.map_manager.get_group()._map_layer.zoom) + max_radius
+            height_mur = y2-y1
+            mur_screen = pygame.Rect(x1,y1,width_mur,height_mur)
+            murs_screen.append(mur_screen)
 
 
+
+
+        murs_screen.append(pygame.Rect(0,0,self.screen.get_width(),1))
+        murs_screen.append(pygame.Rect(self.screen.get_width(),0,1,self.screen.get_height()))
+        murs_screen.append(pygame.Rect(0,self.screen.get_height(),self.screen.get_width(),1))
+        murs_screen.append(pygame.Rect(0,0,1,self.screen.get_height()))
+        return murs_screen
 
     def run (self): #boucle de jeu (tout globalemnt et c'est ça qui se rafraichie tout les frames )
         """run de tout le jeu"""
 
         while self.continuer :             
             self.chec_globals()
-            
-            self.screen.fill("black")   
+            self.display.fill("black")   
             self.touches_appuiller()
+
+
             if self.get_stockage().Fin :
                 self.firtst_run_Fin()
-
             elif self.get_stockage().curent_fin :
+                self.curent_play = False
                 if self.premier_passage3 :
                     self.get_stockage().curent_degrader = True
                     self.premier_passage3 = False
-                self.run_fin()
-                
+                self.run_fin()   
             elif self.menu_princ_actif :
+                self.curent_play = False
                 self.run_menue_princ()
-
             elif self.get_stockage().pause :
+                self.curent_play = False
                 self.run_pause()
-
             else :
+                self.curent_play = True
                 self.run_game()
 
+
             self.afficher_autres_global()
-            pygame.display.flip()#on met a jour l'écrant
+
+            self.gestion_Shaders()
+            
+            pygame.display.flip()#on met a jour l'écrant        
+            self.tex.release()
+            self.frame_total += 1
+           
             self.clock.tick(60)# gère a cb1 de fps le jeu tourne (60 c'est bien)
             
 

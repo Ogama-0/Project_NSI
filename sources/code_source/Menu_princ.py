@@ -1,8 +1,8 @@
 import pygame 
 class Bouton  :
-    def __init__(self,screen : pygame.Surface , sprites : pygame.surface.Surface ,position :tuple[int],nom : str,cliquable : bool = False) :
+    def __init__(self,screen : pygame.Surface , sprites : pygame.surface.Surface ,position :tuple[int],nom : str, size : tuple[int], cliquable : bool = False) :
         if cliquable :
-            self.image_cliqued = [pygame.image.load(f"sources/sprite/autre/menu/{nom}_cliqued_bouton.png"),pygame.image.load(f"sources/sprite/autre/menu/{nom}_cliqued_bouton_appuyer.png")]
+            self.image_cliqued = [pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/{nom}_cliqued_bouton.png"),size),pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/{nom}_cliqued_bouton_appuyer.png"),size)]
             self.cliquable = True
         else : self.cliquable = False
         self.current_sprite = 0
@@ -55,8 +55,8 @@ class Menu :
         self.screen = screen
         self.boutons = {}
         for stk_bouton in boutons :
-            images_bouton = [pygame.image.load(f"sources/sprite/autre/menu/{stk_bouton.nom}_bouton.png"),pygame.image.load(f"sources/sprite/autre/menu/{stk_bouton.nom}_bouton_appuyer.png")]
-            self.boutons[stk_bouton.nom] = Bouton(screen,images_bouton,stk_bouton.position,stk_bouton.nom,stk_bouton.cliquable)
+            images_bouton = [pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/{stk_bouton.nom}_bouton.png"),stk_bouton.size),pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/{stk_bouton.nom}_bouton_appuyer.png"),stk_bouton.size)]
+            self.boutons[stk_bouton.nom] = Bouton(screen,images_bouton,stk_bouton.position,stk_bouton.nom,stk_bouton.size,stk_bouton.cliquable)
 
         self.curent_bck = 0
         self.bckgrnds = background
@@ -99,8 +99,12 @@ class Degrader :
         self.curent_degrader = False
         self.time = 0
         self.contre_curent_degrader = False
-        for i in range(1,22) :
-            self.sprite.append(pygame.image.load(f"sources/sprite/autre/degrader/degrader_{i}.png"))
+        for i in range(3,253,3) :
+            i = 253 - i
+            surf = pygame.surface.Surface(screen.get_size())
+            surf.fill((0,0,0))
+            surf.set_alpha(i)
+            self.sprite.append(surf)
         self.contre_curent_sprite = len(self.sprite)-1
         
         

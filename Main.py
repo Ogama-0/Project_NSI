@@ -91,7 +91,7 @@ class Game : # ici c'est la classe scène
         
         background_FIN = []
         for i in range(3) :
-            background_FIN.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_FIN_{i+1}.png"),(1080,720)))
+            background_FIN.append(pygame.transform.scale(pygame.image.load(f"sources/sprite/autre/menu/backgound_Fin_{i+1}.png"),(1080,720)))
 
         background_credit = []
         for i in range(1) :
